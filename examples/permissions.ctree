@@ -1,0 +1,21 @@
+# A permission tinting example that uses all five symbols.
+#
+# Color names are free-form: here default / protect / delete / archive / inspect
+# are business meanings of this example, and the language reads them as ordinary names.
+
+- root
+    @ default
+
+    > protect
+        | adminPanel
+        - userData
+            @ protect
+            > delete
+                | tempFile
+            ~ systemCache
+                @ delete
+
+    - mods
+        @ archive
+        > inspect
+            | manifest.json

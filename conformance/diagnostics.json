@@ -1,0 +1,575 @@
+{
+  "spec": "0.3",
+  "_comment": [
+    "The diagnostics corpus: a piece of .ctree source plus the set of diagnostics it must produce.",
+    "The set must match exactly, so one extra diagnostic is still a failure. The spec lists the checks, and anything beyond",
+    "that list is non-conformance rather than extra strictness.",
+    "The authoritative table of short codes is conformance/codes.json, and the full list of kinds is in docs/*/contract.md.",
+    "related is optional: a diagnostic may point at another place it is connected to, which DeadRule does when it points at the rule that covers it.",
+    "vocabulary is optional: when it is given the case runs check_with_vocabulary, and otherwise it runs plain check."
+  ],
+  "cases": [
+    {
+      "name": "lex/tab-indent",
+      "note": "§4.3 forbids tabs. Indentation stops counting at the tab, so this line lands in the scope of the anonymous root",
+      "source": "- a\n\t@ red\n",
+      "errors": [
+        {
+          "code": "CT0101",
+          "line": 2
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "lex/line-without-a-symbol",
+      "note": "§4.1: a missing `-` must be an error and never a silent skip. The next line is indented with nothing claiming it, so it is reported as a jump too",
+      "source": "- a\nmods\n    @ red\n",
+      "errors": [
+        {
+          "code": "CT0105",
+          "line": 2
+        },
+        {
+          "code": "CT0104",
+          "line": 3
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "lex/symbol-without-space",
+      "note": "§4.1: a symbol must be followed by at least one space",
+      "source": "-a\n",
+      "errors": [
+        {
+          "code": "CT0106",
+          "line": 1
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "lex/symbol-without-name",
+      "source": "-\n",
+      "errors": [
+        {
+          "code": "CT0107",
+          "line": 1
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "lex/symbol-then-only-spaces",
+      "source": "- \n",
+      "errors": [
+        {
+          "code": "CT0107",
+          "line": 1
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "indent/base-must-be-a-power-of-two",
+      "note": "§4.3: the base may only be 2, 4 or 8",
+      "source": "- a\n   @ red\n",
+      "errors": [
+        {
+          "code": "CT0102",
+          "line": 1
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "indent/not-a-multiple-of-the-base",
+      "note": "The base is 2 and one line is indented 3, which is both a mix and one level too deep",
+      "source": "- a\n  - b\n   - c\n",
+      "errors": [
+        {
+          "code": "CT0103",
+          "line": 3
+        },
+        {
+          "code": "CT0104",
+          "line": 3
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "indent/child-jumps-a-level",
+      "note": "§4.3: the base is 2 and a grandchild indents straight to 6, crossing two levels",
+      "source": "- a\n  - b\n      - c\n",
+      "errors": [
+        {
+          "code": "CT0104",
+          "line": 3
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "indent/one-level-deep-is-fine",
+      "source": "- a\n  - b\n",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "structure/stop-path-may-not-have-children",
+      "note": "§4.2: `|` does not propagate, so declaring children under it contradicts what it means",
+      "source": "- a\n    | b\n        @ red\n",
+      "errors": [
+        {
+          "code": "CT0108",
+          "line": 2
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "structure/explicit-rule-needs-targets",
+      "source": "- a\n    > red\n- b\n",
+      "errors": [
+        {
+          "code": "CT0109",
+          "line": 2
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "structure/rule-inside-a-target-block",
+      "note": "§4.2: only node declarations are allowed inside the block of a `>`, and that rule has no targets either",
+      "source": "- a\n    > red\n        @ blue\n",
+      "errors": [
+        {
+          "code": "CT0112",
+          "line": 3
+        },
+        {
+          "code": "CT0109",
+          "line": 2
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "structure/empty-document-is-a-warning",
+      "note": "An empty document is a warning, since there is simply nothing to do",
+      "source": "# only a comment\n\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0111",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "name": "semantics/dead-rule-points-at-its-killer",
+      "note": "Two `@` rules of the same color in one scope, where the later one covers the earlier one completely",
+      "source": "- a\n    @ red\n    @ red\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0202",
+          "line": 2,
+          "related": [
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "name": "semantics/conflicting-rules",
+      "note": "Two colors collide in one scope, where the author clearly mistyped one of them, so it is reported as a conflict rather than a dead rule",
+      "source": "- a\n    @ red\n    @ blue\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0203",
+          "line": 2,
+          "related": [
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "name": "semantics/redundant-rule",
+      "note": "An ancestor already passes red down, so writing another `@ red` is redundant",
+      "source": "- a\n    @ red\n    - b\n        @ red\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0204",
+          "line": 4
+        }
+      ]
+    },
+    {
+      "name": "semantics/fully-covered-rules-are-dead",
+      "note": "The later `@ delete` covers both earlier rules at once",
+      "source": "- mods\n    @ delete\n    > delete\n        - saves\n    @ delete\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0202",
+          "line": 2,
+          "related": [
+            5
+          ]
+        },
+        {
+          "code": "CT0202",
+          "line": 3,
+          "related": [
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "semantics/partially-covered-is-not-dead",
+      "note": "A rule is only dead under complete coverage, and here protect cuts through only part of it",
+      "source": "- mods\n    @ delete\n    > protect\n        - saves\n",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "semantics/isolated-target-is-redundant",
+      "note": "`~` accepts no tint from an ancestor, and `>` travels exactly that channel, so the target is ignored.",
+      "source": "- mods\n    @ delete\n    > protect\n        ~ textures\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0201",
+          "line": 4
+        }
+      ],
+      "eval": [
+        {
+          "path": [
+            "mods",
+            "textures"
+          ],
+          "color": null
+        }
+      ]
+    },
+    {
+      "name": "semantics/unknown-color-only-with-a-vocabulary",
+      "source": "- a\n    @ red\n",
+      "vocabulary": [
+        "allow",
+        "deny"
+      ],
+      "errors": [
+        {
+          "code": "CT0205",
+          "line": 2
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "errors/all-of-them-in-one-pass",
+      "note": "All of them are reported in one pass instead of stopping at the first",
+      "source": "-a\nhello\n-\n",
+      "errors": [
+        {
+          "code": "CT0106",
+          "line": 1
+        },
+        {
+          "code": "CT0105",
+          "line": 2
+        },
+        {
+          "code": "CT0107",
+          "line": 3
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "lex/names-are-opaque",
+      "note": "All five symbols, `#`, `/` and spaces may appear in a name, because a name runs to end of line and is not escaped",
+      "source": "# a comment on a line of its own\n- a>b\n    @ red\n\n    // a comment line may appear anywhere\n    - a#b\n        @ blue\n    - with space/and slash\n        @ blue\n",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "lex/blank-and-comment-lines-anywhere",
+      "source": "\n- a\n\n    @ red\n\n    - b\n\n        @ blue\n\n",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "indent/base-2",
+      "source": "- a\n  @ red\n",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "indent/base-4",
+      "source": "- a\n    @ red\n",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "indent/base-8",
+      "source": "- a\n        @ red\n",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "name": "lex/crlf-line-endings",
+      "note": "A checkout on Windows is all CRLF. The \\r is part of the newline, so the name is `a`",
+      "source": "- a\r\n    @ red\r\n",
+      "errors": [],
+      "warnings": [],
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": "red"
+        }
+      ]
+    },
+    {
+      "name": "lex/no-trailing-newline",
+      "note": "The last line has no newline at the end, and it is still a complete line",
+      "source": "- a\n    @ red",
+      "errors": [],
+      "warnings": [],
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": "red"
+        }
+      ]
+    },
+    {
+      "name": "lex/utf8-bom",
+      "note": "Notepad writes a BOM by default. Without stripping it the first line counts as not starting with a symbol, and the whole document is wrong from line one",
+      "source": "﻿- a\n    @ red\n",
+      "errors": [],
+      "warnings": [],
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": "red"
+        }
+      ]
+    },
+    {
+      "name": "lex/names-may-be-non-ascii",
+      "note": "A name is an opaque string, so non-ASCII is just as legal, and the same goes for a color",
+      "source": "- 中文名\n    @ 红色\n",
+      "errors": [],
+      "warnings": [],
+      "eval": [
+        {
+          "path": [
+            "中文名"
+          ],
+          "color": "红色"
+        }
+      ]
+    },
+    {
+      "name": "lex/tab-on-a-blank-line-is-fine",
+      "note": "The indentation of blank and comment lines takes no part in the structure, so a leading tab has nothing to do with an unambiguous indent and must not be reported",
+      "source": "- a\n\t\n    @ red\n\t# a comment line\n",
+      "errors": [],
+      "warnings": [],
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": "red"
+        }
+      ]
+    },
+    {
+      "name": "lex/tab-on-a-declaration-still-errors",
+      "note": "The other way round: a tab on a declaration line is still reported, so the case above must not be taken too far",
+      "source": "- a\n  - b\n\t@ red\n",
+      "errors": [
+        {
+          "code": "CT0101",
+          "line": 3
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "name": "structure/duplicate-path-is-a-warning",
+      "note": "Declaring the same path twice is a warning: the rules in both declarations take part in evaluation and the later one settles the path type. It is a reminder that the author wrote it twice",
+      "source": "- a\n- a\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0110",
+          "line": 2,
+          "related": [
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate/both-declarations-execute",
+      "note": "`~` with `@` first and `>` second on the same path. Both rules reach that path, as the explanation chain shows, and the larger line number wins, so the `@ keep` under `~` is covered by the later `>`",
+      "source": "- root\n    ~ saves\n        @ keep\n    > protect\n        - saves\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0110",
+          "line": 5,
+          "related": [
+            2
+          ]
+        },
+        {
+          "code": "CT0202",
+          "line": 3,
+          "related": [
+            4
+          ]
+        }
+      ],
+      "paths": [
+        [
+          "root",
+          "saves"
+        ]
+      ],
+      "eval": [
+        {
+          "path": [
+            "root",
+            "saves"
+          ],
+          "color": "protect"
+        }
+      ],
+      "explain": [
+        {
+          "path": [
+            "root",
+            "saves"
+          ],
+          "chain": [
+            {
+              "color": "keep",
+              "line": 3,
+              "via": "subtree"
+            },
+            {
+              "color": "protect",
+              "line": 4,
+              "via": "explicit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate/last-declaration-sets-the-path-type",
+      "note": "The same two declarations in the opposite order: the last `~` settles the path type, so the target of the earlier `>` resolves to an isolated path and is ignored, which is last-definition-wins showing up in the structure",
+      "source": "- root\n    > protect\n        - saves\n    ~ saves\n        @ keep\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0110",
+          "line": 4,
+          "related": [
+            3
+          ]
+        },
+        {
+          "code": "CT0201",
+          "line": 3
+        }
+      ],
+      "paths": [
+        [
+          "root",
+          "saves"
+        ]
+      ],
+      "eval": [
+        {
+          "path": [
+            "root",
+            "saves"
+          ],
+          "color": "keep"
+        }
+      ],
+      "explain": [
+        {
+          "path": [
+            "root",
+            "saves"
+          ],
+          "chain": [
+            {
+              "color": "keep",
+              "line": 5,
+              "via": "subtree"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate/direct-child-and-a-target-block",
+      "note": "The same name written once inside the block of a `>` and once directly at the same level: they are two declarations of one path rather than two nodes",
+      "source": "- mods\n    > protect\n        - saves\n    - saves\n        @ keep\n",
+      "errors": [],
+      "warnings": [
+        {
+          "code": "CT0110",
+          "line": 4,
+          "related": [
+            3
+          ]
+        },
+        {
+          "code": "CT0202",
+          "line": 2,
+          "related": [
+            5
+          ]
+        }
+      ],
+      "paths": [
+        [
+          "mods",
+          "saves"
+        ]
+      ],
+      "eval": [
+        {
+          "path": [
+            "mods",
+            "saves"
+          ],
+          "color": "keep"
+        }
+      ]
+    }
+  ]
+}

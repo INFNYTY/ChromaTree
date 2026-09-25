@@ -1,0 +1,326 @@
+{
+  "spec": "0.3",
+  "_comment": [
+    "The query corpus: questions that can only be answered by comparing a batch of paths together.",
+    "The color of a single path is what `eval.json` covers, whereas here the questions are about block roots, the exceptions that cut through a block root, counts,",
+    "the nodes a document declares that are absent from the real tree, and the reason why.",
+    "Paths are always segment arrays. The values of via are in docs/*/contract.md:",
+    "  subtree  = tinted directly by `@`",
+    "  explicit = tinted directly by `>`",
+    "  inherited = propagated down from an ancestor, which does not count as an operation"
+  ],
+  "cases": [
+    {
+      "name": "queries/roots-of",
+      "note": "When the whole mods subtree is delete, the block root reported is mods alone rather than every layer beneath it",
+      "source": "- mods\n    @ delete\n    > protect\n        | player-save.dat\n        - textures\n- obsolete\n    @ delete\n",
+      "paths": [
+        [
+          "mods"
+        ],
+        [
+          "mods",
+          "cache"
+        ],
+        [
+          "mods",
+          "player-save.dat"
+        ],
+        [
+          "mods",
+          "textures"
+        ],
+        [
+          "mods",
+          "textures",
+          "custom.png"
+        ],
+        [
+          "obsolete"
+        ],
+        [
+          "obsolete",
+          "old"
+        ]
+      ],
+      "roots_of": {
+        "delete": [
+          [
+            "mods"
+          ],
+          [
+            "obsolete"
+          ]
+        ]
+      },
+      "counts": {
+        "delete": 4,
+        "protect": 3
+      }
+    },
+    {
+      "name": "queries/exceptions-within",
+      "note": "Which rules cut through a block root, which is the raw material for the predicate asking whether a removed root's scope contains protect",
+      "source": "- mods\n    @ delete\n    > protect\n        | player-save.dat\n        - textures\n",
+      "paths": [
+        [
+          "mods"
+        ],
+        [
+          "mods",
+          "cache"
+        ],
+        [
+          "mods",
+          "player-save.dat"
+        ],
+        [
+          "mods",
+          "textures"
+        ],
+        [
+          "mods",
+          "textures",
+          "custom.png"
+        ]
+      ],
+      "exceptions_within": [
+        {
+          "root": [
+            "mods"
+          ],
+          "paths": [
+            [
+              "mods",
+              "player-save.dat"
+            ],
+            [
+              "mods",
+              "textures"
+            ],
+            [
+              "mods",
+              "textures",
+              "custom.png"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "queries/paths-with-and-counts",
+      "source": "- root\n    @ default\n    > special\n        | fileA\n",
+      "paths": [
+        [
+          "root"
+        ],
+        [
+          "root",
+          "fileA"
+        ],
+        [
+          "root",
+          "fileB"
+        ]
+      ],
+      "paths_with": {
+        "special": [
+          [
+            "root",
+            "fileA"
+          ]
+        ]
+      },
+      "counts": {
+        "default": 2,
+        "special": 1
+      }
+    },
+    {
+      "name": "queries/unmatched-declarations",
+      "note": "Under the open world a node declared but absent from the real tree is entirely normal, yet the caller wants to know which ones there are.",
+      "source": "- root\n    @ default\n    - nowhere\n        @ special\n",
+      "paths": [
+        [
+          "root",
+          "a"
+        ]
+      ],
+      "eval": [
+        {
+          "path": [
+            "root",
+            "a"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "nowhere"
+          ],
+          "color": "special"
+        }
+      ],
+      "unmatched": [
+        [
+          "root",
+          "nowhere"
+        ]
+      ]
+    },
+    {
+      "name": "queries/unmatched-accepts-a-covered-declaration",
+      "note": "Only the leaf path is given, and the intermediate directory does not count as unmatched, since otherwise a caller that supplies only leaves would be flooded with false reports",
+      "source": "- root\n    @ default\n    - mid\n        @ special\n",
+      "paths": [
+        [
+          "root",
+          "mid",
+          "leaf"
+        ]
+      ],
+      "unmatched": []
+    },
+    {
+      "name": "queries/explain-chain",
+      "note": "The whole covering chain in ascending line order, where the last entry takes effect",
+      "source": "- mods\n    @ delete\n    > protect\n        - saves\n",
+      "paths": [
+        [
+          "mods",
+          "saves"
+        ]
+      ],
+      "explain": [
+        {
+          "path": [
+            "mods",
+            "saves"
+          ],
+          "chain": [
+            {
+              "color": "delete",
+              "line": 2,
+              "via": "inherited"
+            },
+            {
+              "color": "protect",
+              "line": 3,
+              "via": "explicit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "queries/explain-source-lines",
+      "note": "The source line: this verdict comes from line 3",
+      "source": "- root\n    @ default\n    > special\n        | fileA\n",
+      "paths": [
+        [
+          "root",
+          "fileA"
+        ]
+      ],
+      "explain": [
+        {
+          "path": [
+            "root",
+            "fileA"
+          ],
+          "chain": [
+            {
+              "color": "default",
+              "line": 2,
+              "via": "inherited"
+            },
+            {
+              "color": "special",
+              "line": 3,
+              "via": "explicit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "queries/explain-marks-inherited",
+      "note": "A color that was inherited is marked inherited, since it should not count as an operation in a preview",
+      "source": "- root\n    @ default\n",
+      "paths": [
+        [
+          "root",
+          "deep",
+          "down"
+        ]
+      ],
+      "explain": [
+        {
+          "path": [
+            "root",
+            "deep",
+            "down"
+          ],
+          "chain": [
+            {
+              "color": "default",
+              "line": 2,
+              "via": "inherited"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "queries/explain-none-when-nothing-reaches",
+      "source": "- root\n    @ default\n",
+      "paths": [
+        [
+          "elsewhere"
+        ]
+      ],
+      "eval": [
+        {
+          "path": [
+            "elsewhere"
+          ],
+          "color": null
+        }
+      ],
+      "explain": [
+        {
+          "path": [
+            "elsewhere"
+          ],
+          "chain": []
+        }
+      ]
+    },
+    {
+      "name": "queries/source-columns-survive-bom-and-crlf",
+      "note": "A column number is 1-based and equals indentation plus 1, pointing at the symbol of the declaration. This source carries a BOM, CRLF and non-ASCII at once, which incidentally shows that parsing is unaffected by all three. Only ASCII spaces can precede a symbol, so counting scalars and counting bytes agree in this case, and what it pins down is the 1-based start and the indentation. See rust/docs/*/api.md.",
+      "source": "﻿- 中文名\r\n    @ 红色\r\n",
+      "paths": [
+        [
+          "中文名"
+        ]
+      ],
+      "explain": [
+        {
+          "path": [
+            "中文名"
+          ],
+          "chain": [
+            {
+              "color": "红色",
+              "line": 2,
+              "col": 5,
+              "via": "subtree"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

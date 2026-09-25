@@ -1,0 +1,26 @@
+[package]
+name = "chromatree"
+version = "0.3.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+description = "ChromaTree — a declarative tree-tinting language"
+repository = "https://github.com/INFNYTY/ChromaTree"
+readme = "README.en-US.md"
+keywords = ["tree", "dsl", "parser", "coloring"]
+categories = ["parser-implementations"]
+exclude = ["tests/conformance.rs", "tests/examples.rs"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"], optional = true }
+
+[dev-dependencies]
+proptest = "1.5"
+serde_json = "1.0"
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]
+
+[lints.rust]
+unsafe_code = "forbid"

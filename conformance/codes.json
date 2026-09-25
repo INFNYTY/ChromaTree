@@ -1,0 +1,30 @@
+{
+  "spec": "0.3",
+  "_comment": [
+    "Diagnostic kind to stable short code. This table is the authority, and the only copy.",
+    "It used to exist only in the Rust implementation's src/diag.rs, and it is a cross-language contract,",
+    "because logs and issue tracking need it to line up the same event across implementations.",
+    "Every implementation should have a test that checks its own enum or constant table against this one.",
+    "A short code never changes meaning once published, and a new diagnostic gets a new code rather than reusing an old one.",
+    "The full list of kinds, with severity and trigger conditions, is in docs/*/contract.md."
+  ],
+  "codes": {
+    "TabIndent": "CT0101",
+    "IndentBase": "CT0102",
+    "IndentMixed": "CT0103",
+    "IndentJump": "CT0104",
+    "UnexpectedLine": "CT0105",
+    "MissingSeparator": "CT0106",
+    "EmptyName": "CT0107",
+    "StopHasChildren": "CT0108",
+    "EmptyTargets": "CT0109",
+    "DuplicatePath": "CT0110",
+    "EmptyDocument": "CT0111",
+    "RuleOutsideScope": "CT0112",
+    "ExplicitTargetIsolated": "CT0201",
+    "DeadRule": "CT0202",
+    "ConflictingRule": "CT0203",
+    "RedundantRule": "CT0204",
+    "UnknownColor": "CT0205"
+  }
+}

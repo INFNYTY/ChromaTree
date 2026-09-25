@@ -1,0 +1,4 @@
+# Line endings are LF everywhere, both in the repository and in the working tree, which is
+# the convention the Sigil project uses and keeps CRLF from Windows out. text=auto lets Git
+# decide what counts as text, so binary files are left alone.
+* text=auto eol=lf

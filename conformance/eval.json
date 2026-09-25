@@ -1,0 +1,614 @@
+{
+  "spec": "0.3",
+  "_comment": [
+    "The evaluation corpus: a piece of .ctree source plus assertions about the color of a given path.",
+    "A path is a segment array. Names are opaque and may contain /, so a string form would be ambiguous.",
+    "A null color means the language declines to say, which is the `partial` case in spec §3.2.",
+    "These cases were originally assert_eq! calls in the Rust tests, moved out here so that implementations in every language run the same batch."
+  ],
+  "cases": [
+    {
+      "name": "tutorial/first-example",
+      "note": "Tutorial §1: a default plus an exception, the shape that comes up most often",
+      "source": "- root\n    @ default\n    > special\n        | fileA\n        | fileB\n",
+      "eval": [
+        {
+          "path": [
+            "root"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "fileA"
+          ],
+          "color": "special"
+        },
+        {
+          "path": [
+            "root",
+            "fileB"
+          ],
+          "color": "special"
+        },
+        {
+          "path": [
+            "root",
+            "fileC"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [],
+          "color": null
+        }
+      ]
+    },
+    {
+      "name": "tutorial/undeclared-children",
+      "note": "Tutorial §2: the open world, where undeclared descendants still take the default color",
+      "source": "- root\n    @ default\n    > special\n        | fileA\n",
+      "eval": [
+        {
+          "path": [
+            "root",
+            "fileC"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "fileD"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "a",
+            "b",
+            "c"
+          ],
+          "color": "default"
+        }
+      ]
+    },
+    {
+      "name": "tutorial/protection-and-exclusions",
+      "note": "Tutorial §3: `-` passes the color further down, while `|` stops at itself",
+      "source": "- route0\n    @ delete\n    > protect\n        | file0\n        - route1\n",
+      "eval": [
+        {
+          "path": [
+            "route0"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "route0",
+            "file0"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "route0",
+            "route1"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "route0",
+            "route1",
+            "deep"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "route0",
+            "other"
+          ],
+          "color": "delete"
+        }
+      ]
+    },
+    {
+      "name": "tutorial/isolation-root",
+      "note": "Tutorial §4: `~` accepts no inheritance, but its own `@` still propagates downward",
+      "source": "- route0\n    @ delete\n    ~ route1\n        @ protect\n        > delete\n            | file1\n",
+      "eval": [
+        {
+          "path": [
+            "route0"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "route0",
+            "route1"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "route0",
+            "route1",
+            "other"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "route0",
+            "route1",
+            "file1"
+          ],
+          "color": "delete"
+        }
+      ]
+    },
+    {
+      "name": "tutorial/stop-path-spares-contents",
+      "note": "Tutorial §5: `|` means up to here, so there is no color below it",
+      "source": "- mods\n    @ archive\n    > inspect\n        | manifest.json\n",
+      "eval": [
+        {
+          "path": [
+            "mods"
+          ],
+          "color": "archive"
+        },
+        {
+          "path": [
+            "mods",
+            "manifest.json"
+          ],
+          "color": "inspect"
+        },
+        {
+          "path": [
+            "mods",
+            "manifest.json",
+            "x"
+          ],
+          "color": null
+        }
+      ]
+    },
+    {
+      "name": "tutorial/complete-example",
+      "note": "Tutorial §8: all five symbols are present, to be read against the explanation in the example file",
+      "source": "# a permission tinting example\n- root\n    @ default\n\n    > protect\n        | adminPanel\n        - userData\n            @ protect\n            > delete\n                | tempFile\n            ~ systemCache\n                @ delete\n",
+      "eval": [
+        {
+          "path": [
+            "root"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "adminPanel"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "root",
+            "userData"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "root",
+            "userData",
+            "tempFile"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "root",
+            "userData",
+            "systemCache"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "root",
+            "userData",
+            "systemCache",
+            "deep"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "root",
+            "elsewhere"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "a",
+            "b"
+          ],
+          "color": "default"
+        }
+      ]
+    },
+    {
+      "name": "isolation/nested-stops-propagation",
+      "note": "Spec §7: the `@` of a `~` stops at a deeper `~`, and the outer a has no color precisely because `~` accepts no inheritance",
+      "source": "- a\n    ~ outer\n        @ red\n        ~ inner\n            @ blue\n",
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": null
+        },
+        {
+          "path": [
+            "a",
+            "outer"
+          ],
+          "color": "red"
+        },
+        {
+          "path": [
+            "a",
+            "outer",
+            "x"
+          ],
+          "color": "red"
+        },
+        {
+          "path": [
+            "a",
+            "outer",
+            "inner"
+          ],
+          "color": "blue"
+        },
+        {
+          "path": [
+            "a",
+            "outer",
+            "inner",
+            "y"
+          ],
+          "color": "blue"
+        }
+      ]
+    },
+    {
+      "name": "open-world/undeclared-descendants",
+      "note": "Spec §2.6: not one node along the chain is declared, and the color still reaches it",
+      "source": "- root\n    @ default\n",
+      "eval": [
+        {
+          "path": [
+            "root",
+            "fileC"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "a",
+            "b",
+            "c"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "other",
+            "x"
+          ],
+          "color": null
+        }
+      ]
+    },
+    {
+      "name": "order/rules-run-in-line-order",
+      "note": "Spec §4.4: `@ red` is written later, so its line number is larger and it wins",
+      "source": "- a\n    - b\n        @ blue\n    @ red\n",
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": "red"
+        },
+        {
+          "path": [
+            "a",
+            "b"
+          ],
+          "color": "red"
+        }
+      ]
+    },
+    {
+      "name": "order/line-order-is-the-only-tiebreaker",
+      "note": "Spec §2.5: written the other way round blue wins, while the other descendants of a are still red",
+      "source": "- a\n    @ red\n    - b\n        @ blue\n",
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": "red"
+        },
+        {
+          "path": [
+            "a",
+            "b"
+          ],
+          "color": "blue"
+        },
+        {
+          "path": [
+            "a",
+            "c"
+          ],
+          "color": "red"
+        }
+      ]
+    },
+    {
+      "name": "root/top-level-rule-tints-everything",
+      "note": "Spec §2.7: the document is an anonymous root, so a top-level `@` tints the whole document, the empty path included",
+      "source": "@ everything\n- a\n    - b\n",
+      "eval": [
+        {
+          "path": [],
+          "color": "everything"
+        },
+        {
+          "path": [
+            "a"
+          ],
+          "color": "everything"
+        },
+        {
+          "path": [
+            "a",
+            "b"
+          ],
+          "color": "everything"
+        },
+        {
+          "path": [
+            "zzz"
+          ],
+          "color": "everything"
+        }
+      ]
+    },
+    {
+      "name": "root/top-level-explicit-targets-top-nodes",
+      "note": "Spec §2.7: the targets of a top-level `>` are the top nodes themselves, and the anonymous root is still untinted",
+      "source": "> marked\n    - special\n- other\n",
+      "eval": [
+        {
+          "path": [
+            "special"
+          ],
+          "color": "marked"
+        },
+        {
+          "path": [
+            "special",
+            "deep"
+          ],
+          "color": "marked"
+        },
+        {
+          "path": [
+            "other"
+          ],
+          "color": null
+        },
+        {
+          "path": [],
+          "color": null
+        }
+      ]
+    },
+    {
+      "name": "coverage/partial-coverage-leaves-the-rule-alive",
+      "note": "The dead-rule test in §3.4 only holds under complete coverage, and here it cuts through only part of it",
+      "source": "- mods\n    @ delete\n    > protect\n        - saves\n",
+      "eval": [
+        {
+          "path": [
+            "mods",
+            "other"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "mods",
+            "saves"
+          ],
+          "color": "protect"
+        }
+      ]
+    },
+    {
+      "name": "names/opaque-slash-is-not-a-separator",
+      "note": "The library knows no separator at all, because a name is one opaque string",
+      "source": "- a/b\n    @ red\n",
+      "eval": [
+        {
+          "path": [
+            "a/b"
+          ],
+          "color": "red"
+        },
+        {
+          "path": [
+            "a",
+            "b"
+          ],
+          "color": null
+        }
+      ]
+    },
+    {
+      "name": "examples/permissions",
+      "note": "The example file in the repository, referenced with source_file, so the corpus holds a single copy",
+      "source_file": "examples/permissions.ctree",
+      "eval": [
+        {
+          "path": [
+            "root"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "unlisted"
+          ],
+          "color": "default"
+        },
+        {
+          "path": [
+            "root",
+            "adminPanel"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "root",
+            "userData"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "root",
+            "userData",
+            "anything"
+          ],
+          "color": "protect"
+        },
+        {
+          "path": [
+            "root",
+            "userData",
+            "tempFile"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "root",
+            "userData",
+            "systemCache"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "root",
+            "userData",
+            "systemCache",
+            "deep"
+          ],
+          "color": "delete"
+        },
+        {
+          "path": [
+            "root",
+            "mods"
+          ],
+          "color": "archive"
+        },
+        {
+          "path": [
+            "root",
+            "mods",
+            "manifest.json"
+          ],
+          "color": "inspect"
+        },
+        {
+          "path": [
+            "root",
+            "mods",
+            "manifest.json",
+            "below"
+          ],
+          "color": null
+        },
+        {
+          "path": [
+            "root",
+            "mods",
+            "other"
+          ],
+          "color": "archive"
+        }
+      ]
+    },
+    {
+      "name": "declaration/the-type-is-settled-over-the-whole-document",
+      "note": "The path type is settled over the whole document rather than by what has been written at the moment execution reaches a line. `@ red` comes before `~ a`, but a ends up isolated, so that rule cannot get in, which is where the imperative DFS mental model is only an approximation, spec §2.9",
+      "source": "- a\n    - b\n@ red\n~ a\n",
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": null
+        },
+        {
+          "path": [
+            "a",
+            "b"
+          ],
+          "color": null
+        }
+      ]
+    },
+    {
+      "name": "declaration/isolated-then-recursive",
+      "note": "The other way round: `~` first and `-` second, so the last one settles the type as recursive and the earlier `@ blue` propagates recursively, giving the undeclared descendants of a a color too. The intuition of chronological order would leave them without one",
+      "source": "~ a\n    @ blue\n- a\n",
+      "eval": [
+        {
+          "path": [
+            "a"
+          ],
+          "color": "blue"
+        },
+        {
+          "path": [
+            "a",
+            "x"
+          ],
+          "color": "blue"
+        }
+      ]
+    }
+  ]
+}

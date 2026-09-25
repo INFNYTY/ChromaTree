@@ -1,0 +1,27 @@
+# Build output. No leading slash, because each language keeps its build directory inside its
+# own subdirectory (Cargo's target/ is under rust/), so one pattern covers any depth and
+# adding go/ or js/ later needs no new line.
+target/
+# A library crate does not commit its lock file, which Cargo recommends since only binaries
+# should. If another language has a lock file of its own, list it here for the same reason.
+Cargo.lock
+
+
+# Design drafts, kept outside the repository: this directory is not version controlled, so a
+# fresh clone does not have it. Anything in it is disposable, and any conclusion must be
+# written into docs/ before it counts for anything.
+/prd/
+
+# ==================== Operating systems ====================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==================== Editors ====================
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+*.code-workspace
